@@ -59,6 +59,7 @@
     "expo-secure-store": "~56.0.4",
     "expo-share-intent": "^7.0.0",
     "expo-sharing": "~56.0.21",
+    "expo-speech": "~56.0.3",
     "expo-status-bar": "~56.0.4",
     "expo-system-ui": "~56.0.5",
     "expo-web-browser": "~56.0.5",

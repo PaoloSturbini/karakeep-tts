@@ -19,6 +19,7 @@ export default function BookmarkHtmlHighlighterDom({
   onDeleteHighlight,
   onLinkPress,
   onImagePress,
+  onArticleTextReady,
   readingProgressOffset,
   readingProgressAnchor,
   restoreReadingPosition,
@@ -35,6 +36,7 @@ export default function BookmarkHtmlHighlighterDom({
   onDeleteHighlight?: (highlight: Highlight) => void;
   onLinkPress?: (url: string) => void;
   onImagePress?: (src: string) => void;
+  onArticleTextReady?: (text: string) => void;
   readingProgressOffset?: number | null;
   readingProgressAnchor?: string | null;
   restoreReadingPosition?: boolean;
@@ -118,6 +120,18 @@ export default function BookmarkHtmlHighlighterDom({
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
   }, [onLinkPress, onImagePress]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const text = document.body.innerText
+        .replace(/\u00a0/g, " ")
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      onArticleTextReady?.(text);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [htmlContent, onArticleTextReady]);
   return (
     <div
       className={isDark ? "dark" : undefined}

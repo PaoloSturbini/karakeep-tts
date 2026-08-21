@@ -8,6 +8,7 @@ import {
 } from "react-native-webview/lib/WebViewTypes";
 import * as WebBrowser from "expo-web-browser";
 import QueryPageState from "@/components/QueryPageState";
+import { ReaderTTSControls } from "@/components/reader/ReaderTTSControls";
 import { Text } from "@/components/ui/Text";
 import { useAssetUrl } from "@/lib/hooks";
 import {
@@ -171,6 +172,7 @@ export function BookmarkLinkReaderPreview({
   });
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [articleText, setArticleText] = useState("");
 
   const handleLinkPress = useCallback((url: string) => {
     openUrlExternally(url);
@@ -227,6 +229,7 @@ export function BookmarkLinkReaderPreview({
           </TouchableOpacity>
         </View>
       )}
+      <ReaderTTSControls text={articleText} />
       <BookmarkHtmlHighlighterDom
         htmlContent={displayedBookmarkWithContent.content.htmlContent ?? ""}
         contentStyle={contentStyle}
@@ -239,6 +242,7 @@ export function BookmarkLinkReaderPreview({
         onScrollPositionChange={onScrollPositionChange}
         onLinkPress={handleLinkPress}
         onImagePress={handleImagePress}
+        onArticleTextReady={setArticleText}
         onHighlight={(h) =>
           createHighlight({
             startOffset: h.startOffset,
