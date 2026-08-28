@@ -1,12 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+} from "expo-audio";
 import * as Speech from "expo-speech";
 
 import { synthesizeCloudSpeech } from "./cloudTextToSpeech";
 import useAppSettings from "./settings";
 
 const TARGET_CHUNK_LENGTH = 1_200;
+
+let ttsAudioModePromise: Promise<void> | null = null;
+
+function ensureTTSAudioMode() {
+  ttsAudioModePromise ??= setAudioModeAsync({
+    playsInSilentMode: true,
+  }).catch((error: unknown) => {
+    ttsAudioModePromise = null;
+    throw error;
+  });
+  return ttsAudioModePromise;
+}
 
 export type SpeechStatus = "idle" | "loading" | "playing" | "paused";
 
@@ -97,6 +113,19 @@ export function useTextToSpeech(text: string) {
       indexRef.current = index;
       setChunkIndex(index);
       setError(null);
+      try {
+        await ensureTTSAudioMode();
+      } catch (audioModeError) {
+        if (generation === generationRef.current) {
+          setError(
+            audioModeError instanceof Error
+              ? audioModeError.message
+              : "Audio playback setup failed.",
+          );
+          setStatus("idle");
+        }
+        return;
+      }
       if (!usesCloudProvider) {
         setStatus("playing");
         Speech.speak(chunk, {

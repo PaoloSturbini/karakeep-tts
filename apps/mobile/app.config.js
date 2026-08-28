@@ -47,7 +47,7 @@ export default {
           NSAllowsArbitraryLoads: true,
         },
       },
-      buildNumber: "5",
+      buildNumber: "6",
     },
     android: {
       adaptiveIcon: {
@@ -66,7 +66,7 @@ export default {
         },
       },
       package: IS_DEV ? "it.pst.karakeeptts.dev" : "it.pst.karakeeptts",
-      versionCode: 5,
+      versionCode: 6,
     },
     plugins: [
       "./plugins/trust-local-certs.js",
