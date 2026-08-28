@@ -53,6 +53,18 @@ const zSettingsSchema = z.object({
   readerFontSize: z.number().int().min(12).max(24).optional(),
   readerLineHeight: z.number().min(1.2).max(2.5).optional(),
   readerFontFamily: zReaderFontFamilySchema.optional(),
+  // Text-to-speech settings. The system provider runs on the device and does
+  // not send article text or credentials to Karakeep.
+  ttsProvider: z
+    .enum(["system", "openai", "elevenlabs", "microsoft", "google"])
+    .optional()
+    .default("system"),
+  ttsVoiceIdentifier: z.string().optional(),
+  ttsOpenAIAPIKey: z.string().optional(),
+  ttsElevenLabsAPIKey: z.string().optional(),
+  ttsMicrosoftAPIKey: z.string().optional(),
+  ttsMicrosoftRegion: z.string().optional(),
+  ttsGoogleAPIKey: z.string().optional(),
   // Toolbar customization
   toolbarActions: z
     .array(zToolbarActionId)
@@ -85,6 +97,7 @@ const useSettings = create<AppSettingsState>((set, get) => ({
       showNotes: false,
       keepScreenOnWhileReading: false,
       customHeaders: {},
+      ttsProvider: "system",
       toolbarActions: DEFAULT_TOOLBAR_ACTIONS,
       overflowActions: DEFAULT_OVERFLOW_ACTIONS,
     },

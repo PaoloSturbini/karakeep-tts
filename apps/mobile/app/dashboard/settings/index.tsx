@@ -198,6 +198,24 @@ export default function Settings() {
         </View>
         <Divider orientation="horizontal" className="mx-6 my-1" />
         <View className="flex flex-row items-center justify-between gap-8 px-4 py-1">
+          <Link
+            asChild
+            href="/dashboard/settings/text-to-speech"
+            className="flex-1"
+          >
+            <Pressable className="flex flex-row items-center">
+              <Text className="mr-2 flex-1" numberOfLines={1}>
+                Text to Speech
+              </Text>
+              <Text className="mr-1 text-muted-foreground" numberOfLines={1}>
+                On-device
+              </Text>
+              <ChevronRight />
+            </Pressable>
+          </Link>
+        </View>
+        <Divider orientation="horizontal" className="mx-6 my-1" />
+        <View className="flex flex-row items-center justify-between gap-8 px-4 py-1">
           <Text className="flex-1" numberOfLines={1}>
             Show notes in bookmark card
           </Text>

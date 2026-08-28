@@ -8,11 +8,11 @@ export default {
           scheme: "karakeep-dev",
         }
       : {
-          name: "Karakeep",
-          scheme: "karakeep",
+          name: "kerakeep TTS",
+          scheme: "karakeep-tts",
         }),
-    slug: "hoarder",
-    version: "1.10.0",
+    slug: "karakeep-tts",
+    version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
@@ -27,8 +27,8 @@ export default {
         tinted: "./assets/icon-tinted.png",
       },
       bundleIdentifier: IS_DEV
-        ? "app.hoarder.hoardermobile.dev"
-        : "app.hoarder.hoardermobile",
+        ? "it.pst.KarakeepTTS.dev"
+        : "it.pst.KarakeepTTS",
       splash: {
         image: "./assets/splash.png",
         resizeMode: "contain",
@@ -47,7 +47,7 @@ export default {
           NSAllowsArbitraryLoads: true,
         },
       },
-      buildNumber: "44",
+      buildNumber: "3",
     },
     android: {
       adaptiveIcon: {
@@ -65,31 +65,14 @@ export default {
           backgroundColor: "#000000",
         },
       },
-      package: IS_DEV
-        ? "app.hoarder.hoardermobile.dev"
-        : "app.hoarder.hoardermobile",
-      versionCode: 44,
+      package: IS_DEV ? "it.pst.karakeeptts.dev" : "it.pst.karakeeptts",
+      versionCode: 3,
     },
     plugins: [
       "./plugins/trust-local-certs.js",
       "./plugins/camera-not-required.js",
       "expo-router",
-      [
-        "expo-share-intent",
-        {
-          iosActivationRules: {
-            NSExtensionActivationSupportsWebURLWithMaxCount: 1,
-            NSExtensionActivationSupportsWebPageWithMaxCount: 1,
-            NSExtensionActivationSupportsImageWithMaxCount: 1,
-            NSExtensionActivationSupportsMovieWithMaxCount: 0,
-            NSExtensionActivationSupportsText: true,
-            NSExtensionActivationSupportsFileWithMaxCount: 10,
-            NSExtensionActivationRule:
-              'SUBQUERY (extensionItems, $extensionItem, SUBQUERY ($extensionItem.attachments, $attachment, SUBQUERY ($attachment.registeredTypeIdentifiers, $uti, $uti UTI-CONFORMS-TO "com.adobe.pdf" || $uti UTI-CONFORMS-TO "public.image" || $uti UTI-CONFORMS-TO "public.url" || $uti UTI-CONFORMS-TO "public.plain-text").@count >= 1).@count >= 1).@count >= 1',
-          },
-          androidIntentFilters: ["text/*", "image/*", "application/pdf"],
-        },
-      ],
+      "expo-audio",
       "expo-secure-store",
       [
         "expo-image-picker",
@@ -110,21 +93,10 @@ export default {
       ],
       "expo-sharing",
       "expo-web-browser",
-      [
-        "@sentry/react-native/expo",
-        {
-          url: "https://sentry.io/",
-          project: "react-native",
-          organization: "localhost-labs-ltd",
-        },
-      ],
     ],
     extra: {
       router: {
         origin: false,
-      },
-      eas: {
-        projectId: "d6d14643-ad43-4cd3-902a-92c5944d5e45",
       },
     },
   },

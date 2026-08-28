@@ -225,6 +225,14 @@ export default function Dashboard() {
         }}
       />
       <Stack.Screen
+        name="settings/text-to-speech"
+        options={{
+          title: "Text to Speech",
+          headerTitle: "Text to Speech",
+          headerBackTitle: "Back",
+        }}
+      />
+      <Stack.Screen
         name="settings/offline"
         options={{
           title: "Offline Content",

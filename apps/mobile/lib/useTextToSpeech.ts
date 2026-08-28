@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import * as Speech from "expo-speech";
+
+import { synthesizeCloudSpeech } from "./cloudTextToSpeech";
+import useAppSettings from "./settings";
 
 const TARGET_CHUNK_LENGTH = 1_200;
 
-export type SpeechStatus = "idle" | "playing" | "paused";
+export type SpeechStatus = "idle" | "loading" | "playing" | "paused";
 
 function splitOversizedPart(part: string, maxLength: number) {
   const chunks: string[] = [];
@@ -57,16 +61,30 @@ export function chunkArticleText(
 }
 
 export function useTextToSpeech(text: string) {
+  const { settings } = useAppSettings();
   const chunks = useMemo(() => chunkArticleText(text), [text]);
+  const player = useAudioPlayer(null);
+  const playerStatus = useAudioPlayerStatus(player);
   const [status, setStatus] = useState<SpeechStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
   const [chunkIndex, setChunkIndex] = useState(0);
   const [rate, setRateState] = useState(1);
   const generationRef = useRef(0);
   const indexRef = useRef(0);
   const rateRef = useRef(1);
+  const currentAudioFileRef = useRef<Awaited<
+    ReturnType<typeof synthesizeCloudSpeech>
+  > | null>(null);
+  const usesCloudProvider = settings.ttsProvider !== "system";
+
+  const removeCurrentAudioFile = useCallback(() => {
+    const file = currentAudioFileRef.current;
+    currentAudioFileRef.current = null;
+    if (file?.exists) file.delete();
+  }, []);
 
   const speakChunk = useCallback(
-    (index: number, generation: number) => {
+    async (index: number, generation: number) => {
       if (generation !== generationRef.current) return;
       const chunk = chunks[index];
       if (!chunk) {
@@ -78,16 +96,49 @@ export function useTextToSpeech(text: string) {
 
       indexRef.current = index;
       setChunkIndex(index);
-      setStatus("playing");
-      Speech.speak(chunk, {
-        rate: rateRef.current,
-        onDone: () => speakChunk(index + 1, generation),
-        onError: () => {
-          if (generation === generationRef.current) setStatus("idle");
-        },
-      });
+      setError(null);
+      if (!usesCloudProvider) {
+        setStatus("playing");
+        Speech.speak(chunk, {
+          rate: rateRef.current,
+          voice: settings.ttsVoiceIdentifier,
+          onDone: () => void speakChunk(index + 1, generation),
+          onError: (speechError) => {
+            if (generation === generationRef.current) {
+              setError(speechError.message || "Speech synthesis failed.");
+              setStatus("idle");
+            }
+          },
+        });
+        return;
+      }
+
+      setStatus("loading");
+      try {
+        const file = await synthesizeCloudSpeech(chunk, settings);
+        if (generation !== generationRef.current) {
+          if (file.exists) file.delete();
+          return;
+        }
+        player.pause();
+        removeCurrentAudioFile();
+        currentAudioFileRef.current = file;
+        player.replace(file.uri);
+        player.playbackRate = rateRef.current;
+        player.play();
+        setStatus("playing");
+      } catch (speechError) {
+        if (generation === generationRef.current) {
+          setError(
+            speechError instanceof Error
+              ? speechError.message
+              : "Speech synthesis failed.",
+          );
+          setStatus("idle");
+        }
+      }
     },
-    [chunks],
+    [chunks, player, removeCurrentAudioFile, settings, usesCloudProvider],
   );
 
   const startAt = useCallback(
@@ -95,22 +146,36 @@ export function useTextToSpeech(text: string) {
       generationRef.current += 1;
       const generation = generationRef.current;
       await Speech.stop();
-      speakChunk(Math.max(0, Math.min(index, chunks.length - 1)), generation);
+      player.pause();
+      void speakChunk(
+        Math.max(0, Math.min(index, chunks.length - 1)),
+        generation,
+      );
     },
-    [chunks.length, speakChunk],
+    [chunks.length, player, speakChunk],
   );
 
   const play = useCallback(() => {
     if (!chunks.length) return;
+    if (status === "paused" && usesCloudProvider) {
+      player.play();
+      setStatus("playing");
+      return;
+    }
     if (status === "paused" && Platform.OS === "ios") {
       void Speech.resume().then(() => setStatus("playing"));
       return;
     }
     void startAt(status === "idle" ? 0 : indexRef.current);
-  }, [chunks.length, startAt, status]);
+  }, [chunks.length, player, startAt, status, usesCloudProvider]);
 
   const pause = useCallback(() => {
     if (status !== "playing") return;
+    if (usesCloudProvider) {
+      player.pause();
+      setStatus("paused");
+      return;
+    }
     if (Platform.OS === "ios") {
       void Speech.pause().then(() => setStatus("paused"));
     } else {
@@ -119,15 +184,18 @@ export function useTextToSpeech(text: string) {
       generationRef.current += 1;
       void Speech.stop().then(() => setStatus("paused"));
     }
-  }, [status]);
+  }, [player, status, usesCloudProvider]);
 
   const stop = useCallback(async () => {
     generationRef.current += 1;
     await Speech.stop();
+    player.pause();
+    if (player.isLoaded) await player.seekTo(0);
+    removeCurrentAudioFile();
     indexRef.current = 0;
     setChunkIndex(0);
     setStatus("idle");
-  }, []);
+  }, [player, removeCurrentAudioFile]);
 
   const next = useCallback(() => {
     if (chunks.length)
@@ -142,25 +210,49 @@ export function useTextToSpeech(text: string) {
     (newRate: number) => {
       rateRef.current = newRate;
       setRateState(newRate);
-      if (status === "playing") void startAt(indexRef.current);
+      if (usesCloudProvider) {
+        player.playbackRate = newRate;
+      } else if (status === "playing") {
+        void startAt(indexRef.current);
+      }
     },
-    [startAt, status],
+    [player, startAt, status, usesCloudProvider],
   );
+
+  useEffect(() => {
+    if (
+      usesCloudProvider &&
+      playerStatus.didJustFinish &&
+      status === "playing"
+    ) {
+      void speakChunk(indexRef.current + 1, generationRef.current);
+    }
+  }, [playerStatus.didJustFinish, speakChunk, status, usesCloudProvider]);
 
   useEffect(() => {
     generationRef.current += 1;
     void Speech.stop();
+    player.pause();
+    removeCurrentAudioFile();
     indexRef.current = 0;
     setChunkIndex(0);
     setStatus("idle");
-  }, [text]);
+  }, [
+    player,
+    removeCurrentAudioFile,
+    settings.ttsProvider,
+    settings.ttsVoiceIdentifier,
+    text,
+  ]);
 
   useEffect(
     () => () => {
       generationRef.current += 1;
       void Speech.stop();
+      player.pause();
+      removeCurrentAudioFile();
     },
-    [],
+    [player, removeCurrentAudioFile],
   );
 
   return {
@@ -169,6 +261,7 @@ export function useTextToSpeech(text: string) {
     chunkIndex,
     chunkCount: chunks.length,
     rate,
+    error,
     play,
     pause,
     stop,
