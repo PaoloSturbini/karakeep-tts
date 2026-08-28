@@ -1,0 +1,12 @@
+diff --git a/scripts/get-app-config-ios.sh b/scripts/get-app-config-ios.sh
+index 0bd9d2c..a56bba1 100755
+--- a/scripts/get-app-config-ios.sh
++++ b/scripts/get-app-config-ios.sh
+@@ -12,6 +12,6 @@ EXPO_CONSTANTS_PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+ # in classic main project setup it is something like /path/to/app/ios
+ # in new style pod project setup it is something like /path/to/app/ios/Pods
+-PROJECT_DIR_BASENAME=$(basename $PROJECT_DIR)
++PROJECT_DIR_BASENAME=$(basename "$PROJECT_DIR")
+ if [ "x$PROJECT_DIR_BASENAME" != "xPods" ]; then
+   exit 0
+ fi
